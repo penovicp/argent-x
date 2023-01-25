@@ -1,8 +1,10 @@
 import {
   Call,
   GatewayError,
-  ProviderInterface,
+  HttpError,
+  LibraryError,
   number,
+  ProviderInterface,
   stark,
   transaction,
 } from "starknet"
@@ -44,7 +46,7 @@ const fallbackAggregate = async (
         .callContract({
           contractAddress: call.contractAddress,
           entrypoint: call.entrypoint,
-          calldata: stark.compileCalldata(call.calldata ?? []),
+          calldata: stark.compileCalldata(call.calldata as any ?? []),
         })
         .then((res) => res.result),
     ),
@@ -81,10 +83,15 @@ export const aggregate = async (
       throw e
     }
 
+    console.log('_____instanceof:', e instanceof LibraryError)
+    console.log('_____instanceof:', e instanceof HttpError)
+    console.log('_____instanceof:', e instanceof GatewayError)
+
     if (
       // This is a hack to detect if the error is a Starknet error. Something is broken in the starknet.js
-      (e instanceof GatewayError || "errorCode" in e) &&
-      e.errorCode === "StarknetErrorCode.UNINITIALIZED_CONTRACT"
+      // (e instanceof GatewayError || "errorCode" in e) &&
+      e instanceof GatewayError
+      && e.errorCode === "StarknetErrorCode.UNINITIALIZED_CONTRACT"
     ) {
       return fallbackAggregate(provider, calls)
     }
